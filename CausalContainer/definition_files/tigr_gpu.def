@@ -1,0 +1,127 @@
+Bootstrap: docker
+From: ubuntu:jammy
+
+%files
+    #files used to set up conda environment
+    ./common_files/env_setup.sh /opt/env_setup.sh
+    ./conda_env_defs/tigr_gpu.yml /opt/environment.yml
+    ./common_files/miniconda.sh /opt/miniconda.sh
+	
+    # file used to set up secure access to jupyter notebooks
+    ./common_files/nbk_setup.sh /opt/nbk_setup.sh
+	
+    #files used to run jupyter notebooks
+    ./common_files/jupyter.sh /opt/nbrun.sh
+    ./common_files/batch_runner.sh /opt/batch_runner.sh
+
+%post
+    
+    apt_srcs_path=/etc/apt/sources.list
+    echo "deb http://ch.archive.ubuntu.com/ubuntu/ jammy universe" >> $apt_srcs_path
+    echo "deb http://ch.archive.ubuntu.com/ubuntu/ jammy multiverse" >> $apt_srcs_path
+	
+    apt-get update
+    apt-get -y install nautilus wget vim nano gcc
+
+    apt-get clean -y
+    apt-get autoremove -y
+    
+    # Install miniconda
+    sh /opt/miniconda.sh -b -p /opt/miniconda
+    rm /opt/miniconda.sh
+    
+    /opt/miniconda/bin/conda init
+    
+    bash /opt/env_setup.sh
+
+%runscript
+    echo "The runscript for this container is only informative! Please use the apps."
+    echo "To get help information, use:"
+    echo "singularity run-help <container filename>.sif"
+
+%help
+    Hi, and thank you for trying out the singularity container set up for use
+    in the dawn lab at Université de Lausanne. Documentation for the container
+    is currently not available outside of UNIL (apart from these help 
+    snippets), but feel free to contact Milton (milton.gomez@unil.ch) for 
+    help if you're using this :)
+    
+    To check which apps are currently loaded in the container:
+    singularity inspect --list-apps <container_name>.sif
+    
+    To get help for each app, type:
+    singularity run-help --app <app_name> <container_name>
+    
+    e.g., if the singularity container is named "PySing.sif", for help with 
+    the jupyter notebook app you would type:
+    singularity run-help --app cluster-notebook PySing.sif
+    
+    Make sure to mount any directories you need to access (e.g., if you're 
+    using the container on a cluster). @ Université de Lausanne, in 2022,
+    this is done with:
+    export SINGULARITY_BINDPATH="/scratch,/users,/work"
+
+
+%environment
+    #Global variables available to all apps
+
+
+
+
+
+
+%appenv notebook-setup
+    # environment variables for setting up jupyter notebook
+    
+%apprun notebook-setup
+    bash /opt/nbk_setup.sh
+    
+%apphelp notebook-setup
+    Running this app will set up a jupyter notebook configuration file in your
+    profile so you can tunnel to the cluster securely.
+    
+    
+    
+    
+
+%appenv cluster-notebook
+    # environment variables for setting up jupyter notebook
+    
+%apprun cluster-notebook
+    bash /opt/nbrun.sh
+    
+%apphelp cluster-notebook
+    Running this app will start a jupyter notebook that you can securely tunnel
+    to!
+    
+    Once you have the notebook server running on the cluster, open a separate
+    terminal and write:
+    
+    ssh -N -f -L <my_port_#>:<compute_node>:<my_port_#> <username>@<cluster>
+    
+    e.g., if I had set up my notebook server on the curnagl cluster @ UNIL 
+    using, having been assigned the dna024 node and having selected port 8888,
+    the command would be:
+    ssh -N -f -L localhost:8888:dna024:8888 mgomezd1@curnagl.dcsr.unil.ch
+    
+    Make sure to mount any directories you need to access (e.g., if you're 
+    using the container on a cluster). @ Université de Lausanne, in 2023,
+    this is done with:
+    export SINGULARITY_BINDPATH="/scratch,/users,/work"
+	
+	
+	
+%appenv batch_runner
+    # environment variables for setting up jupyter notebook
+    
+%apprun batch_runner
+    bash /opt/batch_runner.sh $1
+    
+%apphelp batch_runner
+    Running this app will activate the container notebook and run the script
+    that is passed as an argument. 
+    
+    Make sure to mount any directories you need to access (e.g., if you're 
+    using the container on a cluster). @ Université de Lausanne, in 2023,
+    this is done with:
+    export SINGULARITY_BINDPATH="/scratch,/users,/work"
